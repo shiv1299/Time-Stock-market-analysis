@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ data.company_name }} - Stock Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        a.back {
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        a.back:hover { text-decoration: underline; }
+        .company { flex: 1; }
+        .company h1 { font-size: 1.25rem; font-weight: 600; }
+        .symbol { color: #8b949e; font-size: 0.9rem; }
+        .price {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+        .day-change {
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+        .day-change.up { color: #3fb950; }
+        .day-change.down { color: #f85149; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1rem;
+        }
+        .card-label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; margin-bottom: 0.25rem; }
+        .card-value { font-size: 1.1rem; font-weight: 500; }
+        .card.trend .card-value.uptrend { color: #3fb950; }
+        .card.trend .card-value.downtrend { color: #f85149; }
+        .card.trend .card-value.neutral { color: #d29922; }
+        .card.signal .card-value.buy { color: #3fb950; }
+        .card.signal .card-value.sell { color: #f85149; }
+        .card.signal .card-value.hold { color: #d29922; }
+        .chart-wrap {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            height: 280px;
+        }
+        .chart-wrap canvas { max-height: 250px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a class="back" href="/">← Back to search</a>
+        <div class="company">
+            <h1>{{ data.company_name }}</h1>
+            <span class="symbol">{{ data.symbol }}</span>
+        </div>
+        <div>
+            <div class="price">${{ data.current_price }}</div>
+            <div class="day-change {% if data.metrics.day_change_pct >= 0 %}up{% else %}down{% endif %}">
+                {% if data.metrics.day_change_pct >= 0 %}+{% endif %}{{ data.metrics.day_change_pct }}% today
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card trend">
+            <div class="card-label">Trend</div>
+            <div class="card-value {{ data.trend|lower }}">{{ data.trend }}</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Predicted Price</div>
+            <div class="card-value">${{ data.predicted_price }}</div>
+            <div class="day-change {% if data.predicted_change_pct >= 0 %}up{% else %}down{% endif %}">
+                {% if data.predicted_change_pct >= 0 %}+{% endif %}{{ data.predicted_change_pct }}%
+            </div>
+        </div>
+        <div class="card signal">
+            <div class="card-label">Signal</div>
+            <div class="card-value {{ data.signal|lower }}">{{ data.signal }}</div>
+        </div>
+        {% if data.metrics.volume %}
+        <div class="card">
+            <div class="card-label">Volume</div>
+            <div class="card-value">{{ data.metrics.volume|floatformat:0 }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+    </div>
+
+    {{ data.chart_data|json_script:"chart-data" }}
+    <script>
+        const chartData = JSON.parse(document.getElementById('chart-data').textContent);
+        const labels = chartData.map(d => d.date);
+        const values = chartData.map(d => d.close);
+        new Chart(document.getElementById('priceChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Price',
+                    data: values,
+                    borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        ticks: { color: '#8b949e', maxTicksLimit: 8 },
+                        grid: { color: '#21262d' }
+                    },
+                    y: {
+                        ticks: { color: '#8b949e' },
+                        grid: { color: '#21262d' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
